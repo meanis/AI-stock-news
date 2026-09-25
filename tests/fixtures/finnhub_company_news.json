@@ -1,0 +1,33 @@
+[
+  {
+    "category": "company",
+    "datetime": 1725984000,
+    "headline": "Acme Corp beats Q3 earnings expectations",
+    "id": 111000111,
+    "image": "https://example.com/images/acme-q3.jpg",
+    "related": "ACME",
+    "source": "Reuters",
+    "summary": "Acme Corp reported Q3 revenue above analyst estimates, driven by strong demand.",
+    "url": "https://example.com/news/acme-q3-earnings"
+  },
+  {
+    "category": "company",
+    "datetime": 1725897600,
+    "headline": "Acme Corp announces new product line",
+    "id": 111000112,
+    "image": "https://example.com/images/acme-launch.jpg",
+    "related": "ACME",
+    "source": "Bloomberg",
+    "summary": "Acme Corp unveiled a new product line targeting enterprise customers.",
+    "url": "https://example.com/news/acme-product-launch"
+  },
+  {
+    "category": "company",
+    "datetime": 1725811200,
+    "headline": "Acme Corp incomplete wire item",
+    "id": 111000113,
+    "image": "",
+    "related": "ACME",
+    "source": "Wire Service"
+  }
+]

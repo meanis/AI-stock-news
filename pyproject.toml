@@ -1,0 +1,25 @@
+[project]
+name = "AI-stock-news"
+version = "0.1.0"
+description = "AI-generated summaries of the latest news for a stock ticker"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.141.1",
+    "httpx>=0.28.1",
+    "pydantic>=2",
+    "pydantic-settings>=2.15.0",
+    "uvicorn[standard]>=0.53.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "respx>=0.23.1",
+]
+
+[tool.pytest.ini_options]
+addopts = "-m 'not live'"
+markers = [
+    "live: hits real external APIs (Finnhub/OpenAI); requires real API keys, run explicitly with -m live",
+]

@@ -1,0 +1,21 @@
+{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "created": 1725984000,
+  "model": "gpt-4o-mini",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"overall_sentiment\": \"positive\", \"takeaways\": [{\"text\": \"Acme beat Q3 estimates\", \"article_ids\": [\"a1\"]}], \"risk_note\": \"Guidance was not raised.\"}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 40,
+    "total_tokens": 160
+  }
+}

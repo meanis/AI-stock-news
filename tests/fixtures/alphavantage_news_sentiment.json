@@ -1,0 +1,65 @@
+{
+  "items": "3",
+  "sentiment_score_definition": "x <= -0.35: Bearish; -0.35 < x <= -0.15: Somewhat-Bearish; -0.15 < x < 0.15: Neutral; 0.15 <= x < 0.35: Somewhat_Bullish; x >= 0.35: Bullish",
+  "relevance_score_definition": "0 < x <= 1, with a higher score indicating higher relevance",
+  "feed": [
+    {
+      "title": "Acme Corp shares rally on strong guidance",
+      "url": "https://example.com/av/acme-rally",
+      "time_published": "20240910T143000",
+      "authors": ["Jane Doe"],
+      "summary": "Acme Corp shares rose after management raised full-year guidance.",
+      "banner_image": "https://example.com/av/img1.jpg",
+      "source": "Zacks Commentary",
+      "category_within_source": "n/a",
+      "source_domain": "www.zacks.com",
+      "topics": [{"topic": "Earnings", "relevance_score": "0.9"}],
+      "overall_sentiment_score": 0.32,
+      "overall_sentiment_label": "Somewhat-Bullish",
+      "ticker_sentiment": [
+        {
+          "ticker": "ACME",
+          "relevance_score": "0.9",
+          "ticker_sentiment_score": "0.32",
+          "ticker_sentiment_label": "Somewhat-Bullish"
+        }
+      ]
+    },
+    {
+      "title": "Acme Corp faces supply chain headwinds",
+      "url": "https://example.com/av/acme-supply-chain",
+      "time_published": "20240909T090000",
+      "authors": ["John Smith"],
+      "summary": "Analysts flagged potential supply chain disruption for Acme Corp heading into Q4.",
+      "banner_image": "",
+      "source": "Motley Fool",
+      "category_within_source": "n/a",
+      "source_domain": "www.fool.com",
+      "topics": [{"topic": "Supply Chain", "relevance_score": "0.6"}],
+      "overall_sentiment_score": -0.12,
+      "overall_sentiment_label": "Neutral",
+      "ticker_sentiment": [
+        {
+          "ticker": "ACME",
+          "relevance_score": "0.6",
+          "ticker_sentiment_score": "-0.12",
+          "ticker_sentiment_label": "Neutral"
+        }
+      ]
+    },
+    {
+      "title": "Acme Corp incomplete wire item",
+      "url": "https://example.com/av/acme-incomplete",
+      "time_published": "20240908T080000",
+      "authors": [],
+      "banner_image": "",
+      "source": "Wire Service",
+      "category_within_source": "n/a",
+      "source_domain": "wire.example.com",
+      "topics": [],
+      "overall_sentiment_score": 0.0,
+      "overall_sentiment_label": "Neutral",
+      "ticker_sentiment": []
+    }
+  ]
+}

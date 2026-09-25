@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>AI stock news summarizer</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0f1115;
+        --bg-raised: #171a21;
+        --border: #2a2d36;
+        --text: #e8e9ec;
+        --text-muted: #9aa0ab;
+        --accent: #5b8cff;
+        --error-bg: #3a1f22;
+        --error-border: #7a2f36;
+        --error-text: #ff8a8a;
+        --warn-bg: #3a2f14;
+        --warn-border: #6b5420;
+        --warn-text: #f0c15c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 4rem;
+        line-height: 1.5;
+      }
+
+      h1 {
+        margin-bottom: 0.25rem;
+      }
+
+      .disclaimer {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-top: 0;
+      }
+
+      #ticker-form {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 1.5rem 0;
+      }
+
+      #ticker-form label {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+      }
+
+      #ticker-form input {
+        background: var(--bg-raised);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 6px;
+        padding: 0.5rem 0.65rem;
+        font-size: 1rem;
+        flex: 1;
+      }
+
+      #ticker-form input:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+
+      #ticker-form button {
+        background: var(--accent);
+        color: #0b0d11;
+        border: none;
+        border-radius: 6px;
+        padding: 0.55rem 1rem;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      #ticker-form button:hover {
+        opacity: 0.9;
+      }
+
+      #loading {
+        color: var(--text-muted);
+      }
+
+      #error {
+        background: var(--error-bg);
+        border: 1px solid var(--error-border);
+        color: var(--error-text);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+      }
+
+      #result {
+        background: var(--bg-raised);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1.25rem 1.5rem;
+      }
+
+      #result-ticker {
+        margin-top: 0;
+      }
+
+      #result-sentiment {
+        color: var(--text-muted);
+        text-transform: capitalize;
+      }
+
+      #result-degraded-note {
+        background: var(--warn-bg);
+        border: 1px solid var(--warn-border);
+        color: var(--warn-text);
+        border-radius: 6px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+      }
+
+      #result-takeaways,
+      #result-articles {
+        padding-left: 1.25rem;
+      }
+
+      #result-takeaways li,
+      #result-articles li {
+        margin-bottom: 0.4rem;
+      }
+
+      #result-articles a,
+      .citation a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .citation {
+        font-size: 0.8rem;
+        margin-left: 0.2rem;
+      }
+
+      #result-articles a:hover,
+      .citation a:hover {
+        text-decoration: underline;
+      }
+
+      #result-risk-note {
+        color: var(--text-muted);
+        font-style: italic;
+      }
+
+      #result-source {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        border-top: 1px solid var(--border);
+        padding-top: 0.75rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>AI-stock-news</h1>
+    <p class="disclaimer">This is an AI-generated summary, not investment advice.</p>
+    <form id="ticker-form" action="/" method="get">
+      <label for="ticker">Ticker</label>
+      <input type="text" id="ticker" name="ticker" placeholder="AAPL" />
+      <button type="submit">Get summary</button>
+    </form>
+
+    <p id="loading" hidden>Loading summary...</p>
+    <p id="error" hidden></p>
+
+    <section id="result" hidden>
+      <h2 id="result-ticker"></h2>
+      <p id="result-sentiment"></p>
+      <p id="result-degraded-note" hidden>
+        AI summary temporarily unavailable &mdash; showing headlines only.
+      </p>
+      <ul id="result-takeaways"></ul>
+      <p id="result-risk-note"></p>
+      <ol id="result-articles"></ol>
+      <p id="result-source"></p>
+    </section>
+
+    <script>
+      const form = document.getElementById("ticker-form");
+      const loading = document.getElementById("loading");
+      const errorBox = document.getElementById("error");
+      const result = document.getElementById("result");
+      const resultTicker = document.getElementById("result-ticker");
+      const resultSentiment = document.getElementById("result-sentiment");
+      const resultDegradedNote = document.getElementById("result-degraded-note");
+      const resultTakeaways = document.getElementById("result-takeaways");
+      const resultRiskNote = document.getElementById("result-risk-note");
+      const resultArticles = document.getElementById("result-articles");
+      const resultSource = document.getElementById("result-source");
+
+      let latestRequestId = 0;
+
+      function renderSummary(summary) {
+        resultTicker.textContent = summary.ticker;
+        resultSentiment.textContent = `Overall sentiment: ${summary.overall_sentiment}`;
+        resultDegradedNote.hidden = summary.summary_status !== "degraded";
+
+        // Citation numbers match each article's position in the numbered list below.
+        const articleNumbers = new Map(summary.articles.map((article, i) => [article.id, i + 1]));
+
+        resultTakeaways.innerHTML = "";
+        for (const takeaway of summary.takeaways) {
+          const item = document.createElement("li");
+          item.textContent = takeaway.text;
+          for (const articleId of takeaway.article_ids) {
+            const number = articleNumbers.get(articleId);
+            if (number === undefined) {
+              continue;
+            }
+            const article = summary.articles[number - 1];
+            const citation = document.createElement("sup");
+            citation.className = "citation";
+            const link = document.createElement("a");
+            link.href = article.url;
+            link.title = article.headline;
+            link.textContent = `[${number}]`;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            citation.appendChild(link);
+            item.appendChild(citation);
+          }
+          resultTakeaways.appendChild(item);
+        }
+
+        resultRiskNote.textContent = summary.risk_note;
+
+        resultArticles.innerHTML = "";
+        for (const article of summary.articles) {
+          const item = document.createElement("li");
+          const link = document.createElement("a");
+          link.href = article.url;
+          link.textContent = article.headline;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          item.appendChild(link);
+          item.append(` (${article.source})`);
+          resultArticles.appendChild(item);
+        }
+
+        resultSource.textContent = `Source: ${summary.source_provider}`;
+        result.hidden = false;
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const ticker = document.getElementById("ticker").value.trim().toUpperCase();
+        if (!ticker) {
+          return;
+        }
+
+        const requestId = ++latestRequestId;
+
+        loading.hidden = false;
+        errorBox.hidden = true;
+        result.hidden = true;
+
+        try {
+          const response = await fetch(`/api/summary/${encodeURIComponent(ticker)}`);
+          if (!response.ok) {
+            throw new Error(`Request failed with status ${response.status}`);
+          }
+          const summary = await response.json();
+          if (requestId !== latestRequestId) {
+            return;
+          }
+          renderSummary(summary);
+        } catch (err) {
+          if (requestId !== latestRequestId) {
+            return;
+          }
+          errorBox.textContent = "Could not load summary. Please try again.";
+          errorBox.hidden = false;
+        } finally {
+          if (requestId === latestRequestId) {
+            loading.hidden = true;
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
