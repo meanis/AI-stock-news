@@ -33,3 +33,21 @@ def test_settings_reads_optional_and_overridden_values(monkeypatch):
     assert settings.openai_model == "gpt-4o"
     assert settings.news_lookback_days == 3
     assert settings.max_articles == 5
+
+
+def test_settings_summary_cache_defaults_and_overrides(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setenv("FINNHUB_API_KEY", "finnhub-test")
+    monkeypatch.delenv("SUMMARY_CACHE_TTL_SECONDS", raising=False)
+    monkeypatch.delenv("SUMMARY_CACHE_MAX_ENTRIES", raising=False)
+
+    defaults = Settings(_env_file=None)
+    assert defaults.summary_cache_ttl_seconds == 900
+    assert defaults.summary_cache_max_entries == 256
+
+    monkeypatch.setenv("SUMMARY_CACHE_TTL_SECONDS", "0")
+    monkeypatch.setenv("SUMMARY_CACHE_MAX_ENTRIES", "8")
+
+    overridden = Settings(_env_file=None)
+    assert overridden.summary_cache_ttl_seconds == 0
+    assert overridden.summary_cache_max_entries == 8

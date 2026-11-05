@@ -171,6 +171,12 @@ the behaviour is observable rather than hidden.
 - **Determinism and cost.** `temperature=0`, an explicit `max_tokens`, each article's summary
   truncated to 500 characters before being sent, and the article list capped to `MAX_ARTICLES`
   (done by `SummaryService` before the summarizer ever sees them).
+- **Caching.** `CachingSummarizer` wraps the summarizer with an in-memory TTL cache keyed on
+  ticker plus the exact article IDs, so new articles miss the cache on their own and the TTL
+  (`SUMMARY_CACHE_TTL_SECONDS`, default 15 min; `0` disables it) is only a backstop. Degraded
+  summaries are never cached, so a transient LLM failure is retried on the next request. The
+  cache is per-process, bounded by `SUMMARY_CACHE_MAX_ENTRIES` (oldest evicted first), and
+  cleared on restart; the news fetch still runs on every request.
 - **Model config.** `OPENAI_MODEL` is an env var so the reviewer can point it at whatever they have
   access to.
 - **Failure handling.** A timeout (30s), non-2xx response, malformed JSON, a response shape that
@@ -207,6 +213,8 @@ FINNHUB_API_KEY=...
 # ALPHAVANTAGE_API_KEY=...        # optional; uncomment to enable the fallback provider
 NEWS_LOOKBACK_DAYS=7
 MAX_ARTICLES=10
+SUMMARY_CACHE_TTL_SECONDS=900    # 0 disables the in-memory LLM summary cache
+SUMMARY_CACHE_MAX_ENTRIES=256
 ```
 
 Only `OPENAI_API_KEY` and `FINNHUB_API_KEY` are required. `ALPHAVANTAGE_API_KEY` is commented out
@@ -230,14 +238,15 @@ uv run pytest -m live             # requires real keys
 | Static page over SPA | No rich client interactivity. The JSON endpoint remains the real product if a SPA is ever added. |
 | Two news providers | A little extra mapping code. Buys resilience and demonstrates the abstraction holds. |
 | Structured LLM output | Slightly more prompt work and a validation path. Buys testability and grounded citations. |
-| No persistence | Every request hits the news provider and OpenAI. Acceptable for a demo, not for production — see below. |
+| No persistence, in-memory summary cache only | Every request hits the news provider; OpenAI is only called when the article set is new or the TTL lapsed. The cache is per-process and lost on restart. Acceptable for a demo, not for production — see below. |
 | Degrade instead of erroring | Slightly more branching in the summarizer adapter. The user still gets headlines when the model is unavailable. |
 
 ## 9. Scaling this (discussion notes)
 
-- **Caching is the first move.** Cache the summary keyed by ticker plus a hash of the article set,
-  so the key changes only when the news changes. TTL tied to market hours; shorter during the
-  session, longer overnight.
+- **Caching is the first move.** The in-process `CachingSummarizer` already keys on ticker plus the
+  article set, so the key changes only when the news changes. Next steps: move it to a shared store
+  (e.g. Redis) so replicas share hits, cache the news fetch too, coalesce concurrent misses for the
+  same key, and tie the TTL to market hours (shorter during the session, longer overnight).
 - **Upstream limits.** Both news APIs and OpenAI rate-limit. Needs a token bucket per provider,
   retry with backoff and jitter, and a circuit breaker so a dead upstream fails fast.
 - **Perceived latency.** Stream the summary token-by-token to the client; show the headlines
@@ -277,7 +286,7 @@ uv run pytest -m live             # requires real keys
 - [x] Verify a clean clone runs with only the README instructions
 
 **Deliberately not doing** (mention in the walkthrough rather than building)
-- Persistence / caching layer, auth, deployment, watchlists, streaming responses, Docker
+- Persistence / shared (cross-process) cache, auth, deployment, watchlists, streaming responses, Docker
 - Ticker format validation — any string is only trimmed and uppercased before being passed to the
   news providers; an invalid ticker just comes back as a no-news-found result (`risk_note` says
   so) rather than a 400. Not worth the added surface for a demo.

@@ -10,3 +10,5 @@ class Settings(BaseSettings):
     alphavantage_api_key: str | None = None
     news_lookback_days: int = 7
     max_articles: int = 10
+    summary_cache_ttl_seconds: int = 900
+    summary_cache_max_entries: int = 256
