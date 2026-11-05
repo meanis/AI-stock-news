@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from app.adapters.llm.caching_summarizer import CachingSummarizer
 from app.adapters.llm.openai_summarizer import OpenAISummarizer
 from app.adapters.news.alphavantage import AlphaVantageNewsProvider
 from app.adapters.news.composite import CompositeNewsProvider
@@ -25,7 +26,11 @@ def get_summary_service() -> SummaryService:
             api_key=settings.alphavantage_api_key, lookback_days=settings.news_lookback_days
         )
     news_provider = CompositeNewsProvider(primary=primary, secondary=secondary)
-    summarizer = OpenAISummarizer(api_key=settings.openai_api_key, model=settings.openai_model)
+    summarizer = CachingSummarizer(
+        OpenAISummarizer(api_key=settings.openai_api_key, model=settings.openai_model),
+        ttl_seconds=settings.summary_cache_ttl_seconds,
+        max_entries=settings.summary_cache_max_entries,
+    )
     return SummaryService(
         news_provider=news_provider,
         summarizer=summarizer,
