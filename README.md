@@ -111,7 +111,7 @@ Adapter                  real adapter code, network mocked with respx
 Unit                     pure logic, no I/O, fakes behind the ports
 ```
 
-Counts are as of this writing (58 offline tests plus 1 live). The shape follows from the
+Counts are as of this writing (69 offline tests plus 1 live). The shape follows from the
 architecture: ports and adapters keep every business rule in code that needs no I/O, so most
 tests can be pure unit tests. Each tier up adds one real piece — the HTTP client, then the web
 framework, then the real services — and tests only what that piece adds. Tiers are defined by
@@ -240,6 +240,7 @@ uv run pytest -m live             # requires real keys
 | Structured LLM output | Slightly more prompt work and a validation path. Buys testability and grounded citations. |
 | No persistence, in-memory summary cache only | Every request hits the news provider; OpenAI is only called when the article set is new or the TTL lapsed. The cache is per-process and lost on restart. Acceptable for a demo, not for production — see below. |
 | Degrade instead of erroring | Slightly more branching in the summarizer adapter. The user still gets headlines when the model is unavailable. |
+| No ticker format validation | Any string is only trimmed and uppercased before reaching the news providers, so an invalid ticker comes back as a no-news-found result (`risk_note` says so) rather than a 400. Not worth the added surface for a demo. |
 
 ## 9. Scaling this (discussion notes)
 
@@ -258,37 +259,3 @@ uv run pytest -m live             # requires real keys
 - **Richer frontend.** If interactivity grows (watchlists, live refresh), the JSON endpoint is
   already the contract a SPA would consume.
 
----
-
-## 10. Checklist
-
-**Build**
-- [x] Project skeleton: `uv` init, dependencies, `config.py` with pydantic-settings, `/health`
-- [x] Domain layer: `Article`, `Takeaway`, `StockSummary`, the two port Protocols
-- [x] `FinnhubNewsProvider` + mapper + JSON fixture
-- [x] `AlphaVantageNewsProvider` + mapper + JSON fixture
-- [x] `CompositeNewsProvider` with fallback
-- [x] `OpenAISummarizer`: prompt, structured output schema, truncation, temperature 0
-- [x] Grounding validation: reject bullets citing unknown article IDs
-- [x] `SummaryService` wiring fetch → cap → summarize, with the degraded path
-- [x] `GET /api/summary/{ticker}` + `GET /` serving a static page, loading and error states
-
-**Tests**
-- [x] Domain unit tests
-- [x] Mapper tests
-- [x] respx adapter tests: auth, date window, non-200, timeout
-- [x] Composite provider fallback tests
-- [x] LLM contract test against a canned response
-- [x] API tests: happy path, unknown ticker, provider outage, summarizer outage
-
-**Docs and hygiene**
-- [x] `.env.example` committed, real `.env` gitignored
-- [x] Verify a clean clone runs with only the README instructions
-
-**Deliberately not doing** (mention in the walkthrough rather than building)
-- Persistence / shared (cross-process) cache, auth, deployment, watchlists, streaming responses, Docker
-- Ticker format validation — any string is only trimmed and uppercased before being passed to the
-  news providers; an invalid ticker just comes back as a no-news-found result (`risk_note` says
-  so) rather than a 400. Not worth the added surface for a demo.
-
----
